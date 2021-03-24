@@ -9,21 +9,21 @@ Coded by J. de la Cruz Rodriguez (ISP-SU, 2021)
 # *******************************************************************************
 
 def getContinuumOpacity(Tg, Pg = None, rho = None, nthreads=4, wav=[5000.0]):
-"""
-getContinuumOpacity computes the background opacity due to H (H, H-, etc.. and Thompson)
-Input: 
+    """
+    getContinuumOpacity computes the background opacity due to H (H, H-, etc.. and Thompson)
+    Input: 
      Tg: Gas temperature in Kelvin, 3D numpy array [ny, nx, ndep] (float32 or float64)
      Pg: Gas pressure in Barye, 3D numpy array [ny, nx, ndep] (float32 or float64)
     rho: Mass density in g/cm**3,  3D numpy array [ny, nx, ndep] (float32 or float64)
 
-Note: Pg or rho must be provided even if they are defined as keywords.
-
-Optional:
+    Note: Pg or rho must be provided even if they are defined as keywords.
+    
+    Optional:
     nthreads: number of parallel threads to use in the calculations
          wav: Wavelenghts at which the continuum opacity must be computed [in Angstroms]
-
-Coded by J. de la Cruz Rodriguez (ISP-SU, 2021)
-"""
+    
+    Coded by J. de la Cruz Rodriguez (ISP-SU, 2021)
+    """
     wav1 = np.float64(wav)
     dtype = Tg.dtype
     ny, nx, nDep = Tg.shape
@@ -80,22 +80,22 @@ Coded by J. de la Cruz Rodriguez (ISP-SU, 2021)
 # *******************************************************************************
 
 def getTau(Tg, z, Pg = None, rho = None, nthreads=4, wav=[5000.0]):
-"""
-getTau computes the optical-depth scale given a set of temperature, Z-scale and [Pgas or Rho]
-Input: 
+    """
+    getTau computes the optical-depth scale given a set of temperature, Z-scale and [Pgas or Rho]
+    Input: 
      Tg: Gas temperature in Kelvin, 3D numpy array [ny, nx, ndep] (float32 or float64)
       z: z-scale, 3D numpy array [ny, nx, ndep] (float32 or float64). Note that the top of the box must be located at index 0.
      Pg: Gas pressure in Barye, 3D numpy array [ny, nx, ndep] (float32 or float64)
     rho: Mass density in g/cm**3,  3D numpy array [ny, nx, ndep] (float32 or float64)
-
-Note: Pg or rho must be provided even if they are defined as keywords.
-
-Optional:
+    
+    Note: Pg or rho must be provided even if they are defined as keywords.
+    
+    Optional:
     nthreads: number of parallel threads to use in the calculations
          wav: Wavelenghts at which the continuum opacity must be computed [in Angstroms]
-
-Coded by J. de la Cruz Rodriguez (ISP-SU, 2021)
-"""
+    
+    Coded by J. de la Cruz Rodriguez (ISP-SU, 2021)
+    """
     wav1 = np.asarray(wav, dtype='float64', order='c')
     
     alpha = getContinuumOpacity(Tg, Pg = Pg, rho=rho, nthreads=nthreads, wav = wav1)
