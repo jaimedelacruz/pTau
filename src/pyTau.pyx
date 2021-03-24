@@ -51,12 +51,15 @@ def getBackgroundOpacityPgas_float(ar[float,ndim=3] Tg, ar[float,ndim=3] Pg, ar[
     cdef int nx = Tg.shape[1]
     cdef int nDep = Tg.shape[2]
     cdef long ntot = (<long>(nx*ny)) * nDep;
+
+    cdef ar[double, ndim=1] wav1 = wav * 1.e-8 # to cm
+
     
     # Allocate result
-    cdef ar[double, ndim=3] alpha = zeros((ny,nx,nDep), dtype='float64')
+    cdef ar[double, ndim=4] alpha = zeros((ny,nx,nDep,nwav), dtype='float64', order='c')
 
     # call C++ tools
-    getAlpha_T_Pg_float(ntot, <float*>Tg.data, <float*>Pg.data, nwav, <double*>wav.data, <double*>alpha.data, <int>nthreads)
+    getAlpha_T_Pg_float(ntot, <float*>Tg.data, <float*>Pg.data, nwav, <double*>wav1.data, <double*>alpha.data, <int>nthreads)
     
 
     return alpha
@@ -71,12 +74,15 @@ def getBackgroundOpacityPgas_double(ar[double,ndim=3] Tg, ar[double,ndim=3] Pg, 
     cdef int nx = Tg.shape[1]
     cdef int nDep = Tg.shape[2]
     cdef long ntot = (<long>(nx*ny)) * nDep;
+
+    cdef ar[double, ndim=1] wav1 = wav * 1.e-8 # to cm
+
     
     # Allocate result
-    cdef ar[double, ndim=3] alpha = zeros((ny,nx,nDep), dtype='float64')
+    cdef ar[double, ndim=4] alpha = zeros((ny,nx,nDep,nwav), dtype='float64', order='c')
 
     # call C++ tools
-    getAlpha_T_Pg_double(ntot, <double*>Tg.data, <double*>Pg.data, nwav, <double*>wav.data, <double*>alpha.data, <int>nthreads)
+    getAlpha_T_Pg_double(ntot, <double*>Tg.data, <double*>Pg.data, nwav, <double*>wav1.data, <double*>alpha.data, <int>nthreads)
     
 
     return alpha
@@ -92,12 +98,14 @@ def getBackgroundOpacityRho_float(ar[float,ndim=3] Tg, ar[float,ndim=3] rho, ar[
     cdef int nx = Tg.shape[1]
     cdef int nDep = Tg.shape[2]
     cdef long ntot = (<long>(nx*ny)) * nDep;
+
+    cdef ar[double, ndim=1] wav1 = wav * 1.e-8 # to cm
     
     # Allocate result
-    cdef ar[double, ndim=3] alpha = zeros((ny,nx,nDep), dtype='float64')
+    cdef ar[double, ndim=4] alpha = zeros((ny,nx,nDep,nwav), dtype='float64', order='c')
 
     # call C++ tools
-    getAlpha_T_rho_float(ntot, <float*>Tg.data, <float*>rho.data, nwav, <double*>wav.data, <double*>alpha.data, <int>nthreads)
+    getAlpha_T_rho_float(ntot, <float*>Tg.data, <float*>rho.data, nwav, <double*>wav1.data, <double*>alpha.data, <int>nthreads)
     
 
     return alpha
@@ -112,12 +120,14 @@ def getBackgroundOpacityRho_double(ar[double,ndim=3] Tg, ar[double,ndim=3] rho, 
     cdef int nx = Tg.shape[1]
     cdef int nDep = Tg.shape[2]
     cdef long ntot = (<long>(nx*ny)) * nDep;
+
+    cdef ar[double, ndim=1] wav1 = wav * 1.e-8 # to cm
     
     # Allocate result
-    cdef ar[double, ndim=3] alpha = zeros((ny,nx,nDep), dtype='float64')
+    cdef ar[double, ndim=4] alpha = zeros((ny,nx,nDep,nwav), dtype='float64', order = 'c')
 
     # call C++ tools
-    getAlpha_T_rho_double(ntot, <double*>Tg.data, <double*>rho.data, nwav, <double*>wav.data, <double*>alpha.data, <int>nthreads)
+    getAlpha_T_rho_double(ntot, <double*>Tg.data, <double*>rho.data, nwav, <double*>wav1.data, <double*>alpha.data, <int>nthreads)
     
 
     return alpha
@@ -134,7 +144,7 @@ def getTau_float(ar[float,ndim=3] z, ar[double, ndim=3] alpha, int nthreads=4):
 
     
     # Allocate result
-    cdef ar[float, ndim=3] tau = zeros((ny,nx,nDep), dtype='float32')
+    cdef ar[float, ndim=3] tau = zeros((ny,nx,nDep), dtype='float32', order='c')
 
 
     # call C++ tools
@@ -154,7 +164,7 @@ def getTau_double(ar[double,ndim=3] z, ar[double, ndim=3] alpha, int nthreads=4)
 
     
     # Allocate result
-    cdef ar[double, ndim=3] tau = zeros((ny,nx,nDep), dtype='float64')
+    cdef ar[double, ndim=3] tau = zeros((ny,nx,nDep), dtype='float64', order='c')
 
 
     # call C++ tools

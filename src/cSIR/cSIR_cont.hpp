@@ -409,7 +409,7 @@ namespace sr{
 
   // ****************************************************************************** //
 
-    template<typename T>
+  template<typename T>
   inline T continuum_absorption_nu(T const &Tg, T const &Ne, double const &nu, T* const __restrict__ H)
   {
     double const lambda = phyc::CC<double> / nu;

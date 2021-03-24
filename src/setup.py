@@ -12,8 +12,9 @@ import pathlib
 
 p = pathlib.Path(sys.executable)
 root_dir = str(pathlib.Path(*p.parts[0:-2]))
-comp_flags=['-O3','-std=c++14','-march=native','-fPIC', '-fopenmp']
+comp_flags=['-Ofast','-std=c++14','-march=native','-fPIC', '-fopenmp','-fno-strict-aliasing']
 
+os.system('rm pyTau.cpp')
 
 if(plt.system() == 'Darwin'):
     #root_dir = '/opt/local/'

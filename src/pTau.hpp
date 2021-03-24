@@ -40,9 +40,9 @@ T getAvweight(int const N, const T* const __restrict__ abund)
 // ********************************************************* //
 
 template<typename T> inline
-void getAlpha_one(T const& Tg, T const& Ne, int const nLambda,
+void getAlpha_one(T const Tg, T const Ne, int const nLambda,
 		  const double* const __restrict__ lambda, T* const __restrict__ alpha,
-		  std::vector<T> const& abund, T* const __restrict__ Hpop)
+		  std::vector<T> const& abund,  T* const __restrict__ Hpop)
 {
   // alpha has dimensions (nLambda) //
   
@@ -57,7 +57,7 @@ void getAlpha_one(T const& Tg, T const& Ne, int const nLambda,
 // ********************************************************* //
 
 template<typename T> inline
-T Ne_from_Rho(T const &Tg, T const& rho,  T Hpop[sr::nHv], std::vector<T> const& abund, T const& avweight, T const &mu)
+T Ne_from_Rho(T const &Tg, T const& rho,  T Hpop[sr::nHv], std::vector<T> const& abund, T const avweight, T const mu)
 {
   
   T const BKT = Tg * phyc::BK<T>;
@@ -69,7 +69,7 @@ T Ne_from_Rho(T const &Tg, T const& rho,  T Hpop[sr::nHv], std::vector<T> const&
   double diff = 1.0;
   int it = 0;
   
-  while((diff>=1.e-5) && (it++ < 200)){
+  while((diff>=1.e-5) && (it++ < 50)){
     Pe *= (1.0 + rho / irho) / 2;
     Pg = sr::compute_Pg(Tg, Pe, abund, Hpop);
     
@@ -123,27 +123,36 @@ void getAlpha_T_Pg(long const ntot, const T* const __restrict__ Tg, const T* con
   // --- prepare parallel loop and get alpha --- //
 
   long ii = 0;
-  int tid = 0;
+  int tid = 0, per=0, oper=-1;
+  float pscl = 100.0 / (ntot-1.0);
   double Ne = 0, tg = 0, pg = 0;
 
   double* const __restrict__ Hpop_all = new double [sr::nHv*nthreads];
   double* __restrict__ Hpop = NULL;
   
-#pragma omp parallel default(shared) firstprivate(ii, Ne, Hpop) num_threads(nthreads)
+#pragma omp parallel default(shared) firstprivate(ii, Ne, Hpop, tg, pg, tid) num_threads(nthreads)
   {
 
     tid = omp_get_thread_num();
     Hpop = &Hpop_all[tid*sr::nHv];
     
-#pragma omp for schedule(static)
+#pragma omp for schedule(dynamic,8)
     for(ii=0; ii<ntot; ++ii){
       tg = Tg[ii], pg = Pg[ii];
       
       Ne = sr::Pe_from_Pg<double>(tg, pg, abund, Hpop) / (tg*phyc::BK<T>);
       getAlpha_one<double>(tg, Ne, nLambda, lambda, &alpha[ii*nLambda], abund, Hpop);
-     
+
+      if(tid == 0){
+	per = int(ii*pscl+0.5);
+	if(per != oper){
+	  oper = per;
+	  fprintf(stderr,"\rprocessing -> %4d\%", per);
+	}
+      }
     } // ii
   } // parallel
+  fprintf(stderr,"\rprocessing -> %4d\%\n", int(100));
 
   delete [] Hpop_all;
 }
@@ -194,26 +203,36 @@ void getAlpha_T_rho(long const ntot, const T* const __restrict__ Tg, const T* co
   // --- prepare parallel loop and get alpha --- //
 
   long ii = 0;
-  int tid = 0;
+  int tid = 0, per=0, oper=-1;
+  float pscl = 100.0 / (ntot-1.0);
   double Ne = 0, tg=0, r = 0;
 
   double* const __restrict__ Hpop_all = new double [sr::nHv*nthreads];
   double* __restrict__ Hpop = NULL;
   
-#pragma omp parallel default(shared) firstprivate(ii, Ne, tid, Hpop) num_threads(nthreads)
+#pragma omp parallel default(shared) firstprivate(ii, Ne, tid, Hpop, tg, r) num_threads(nthreads)
   {
 
     tid = omp_get_thread_num();
     Hpop = &Hpop_all[tid*sr::nHv];
     
-#pragma omp for schedule(static)
+#pragma omp for schedule(dynamic,8)
     for(ii=0; ii<ntot; ++ii){
       tg = Tg[ii], r = rho[ii];
       Ne = Ne_from_Rho(tg, r, Hpop, abund, avweight, mu);
-      getAlpha_one(tg, Ne, nLambda, lambda, &alpha[ii*nLambda], abund, Hpop);     
+      getAlpha_one(tg, Ne, nLambda, lambda, &alpha[ii*nLambda], abund, Hpop);
+
+      if(tid == 0){
+	per = int(ii*pscl+0.5);
+	if(per != oper){
+	  oper = per;
+	  fprintf(stderr,"\rprocessing -> %4d\%", per);
+	}
+      }
     } // ii
   } // parallel
 
+  fprintf(stderr,"\rprocessing -> %4d\%\n", int(100));
 
   delete [] Hpop_all;
 }
@@ -260,3 +279,5 @@ void integrate_alpha(int const nPix, int const nDep, const T* const __restrict__
     }
   }
 }
+
+// ********************************************************* //
