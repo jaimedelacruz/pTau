@@ -12,7 +12,7 @@ if __name__ == "__main__":
 
     t0 = time.time()
     nthreads = 8 # Use as many as your computer has!
-    ltau500 = pyTau.getTau(l.temp, z3d, Pg=l.pgas, nthreads=nthreads, wav = [5000.0])
+    ltau500 = pyTau.getTau(temp, z3d, Pg=pgas, nthreads=nthreads, wav = [5000.0])
     t1 = time.time()
     print("Pgas case dT = {0}s".format(t1-t0))
     
