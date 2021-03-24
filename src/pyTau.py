@@ -1,5 +1,6 @@
 import pTau
 import numpy as np
+from ipdb import set_trace
 
 """
 Wrapper routines for C++ cython module
@@ -28,7 +29,7 @@ def getContinuumOpacity(Tg, Pg = None, rho = None, nthreads=4, wav=[5000.0]):
     dtype = Tg.dtype
     ny, nx, nDep = Tg.shape
 
-    print("getContinuumOpacity: ny={0}, nx={1}, nDep={2}, dtype={3}".format(ny, nx, nDep, dtype.name))
+    print("getContinuumOpacity: ny={0}, nx={1}, nDep={2}, dtype={3}, nthreads={4}".format(ny, nx, nDep, dtype.name, nthreads))
     
     
     tcont =  Tg.flags['C_CONTIGUOUS']
@@ -101,7 +102,6 @@ def getTau(Tg, z, Pg = None, rho = None, nthreads=4, wav=[5000.0]):
     alpha = getContinuumOpacity(Tg, Pg = Pg, rho=rho, nthreads=nthreads, wav = wav1)
     nWav = wav1.size
 
-    
     ny, nx, nDep = Tg.shape
     tau = np.zeros((nWav, ny, nx, nDep), dtype=Tg.dtype, order='c')
     
