@@ -1,4 +1,3 @@
-#include <string>
 #include <vector>
 #include <omp.h>
 
@@ -147,12 +146,12 @@ void getAlpha_T_Pg(long const ntot, const T* const __restrict__ Tg, const T* con
 	per = int(ii*pscl+0.5);
 	if(per != oper){
 	  oper = per;
-	  fprintf(stderr,"\rprocessing -> %4d\%", per);
+	  fprintf(stderr,"\rprocessing -> %4d%s", per,"%");
 	}
       }
     } // ii
   } // parallel
-  fprintf(stderr,"\rprocessing -> %4d\%\n", int(100));
+  fprintf(stderr,"\rprocessing -> %4d%s\n", int(100),"%");
 
   delete [] Hpop_all;
 }
@@ -226,13 +225,13 @@ void getAlpha_T_rho(long const ntot, const T* const __restrict__ Tg, const T* co
 	per = int(ii*pscl+0.5);
 	if(per != oper){
 	  oper = per;
-	  fprintf(stderr,"\rprocessing -> %4d\%", per);
+	  fprintf(stderr,"\rprocessing -> %4d%s", per,"%");
 	}
       }
     } // ii
   } // parallel
 
-  fprintf(stderr,"\rprocessing -> %4d\%\n", int(100));
+  fprintf(stderr,"\rprocessing -> %4d%s\n", int(100), "%");
 
   delete [] Hpop_all;
 }

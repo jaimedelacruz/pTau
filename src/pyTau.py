@@ -119,3 +119,102 @@ def getTau(Tg, z, Pg = None, rho = None, nthreads=4, wav=[5000.0]):
     return tau.squeeze()
 
 # *******************************************************************************
+
+def _checkArray(var, dtype = None):
+
+    if(dtype is None):
+        dtype = var.dtype
+    
+    if((var.flags['C_CONTIGUOUS'] == True) and (var.dtype == dtype)):
+        return var
+    else:
+        return np.ascontiguousarray(var, dtype=dtype)
+    
+# *******************************************************************************
+
+def _checkDims(arr1, arr2, Name = ""):
+
+    nDim = len(arr1.shape)
+    if(len(arr2.shape) != nDim):
+        print("Error, Array [{0}] has different dimensions than reference array, exiting".format(Name))
+        return False
+    
+    allFine = True
+
+    for ii in range(nDim):
+        if(arr1.shape[ii] != arr2.shape[ii]):
+            allFine = False
+            print("Error, Array [{0}] has different dimensions than reference array: dim[{1}] = {2} != {3}]".format(Name, ii, arr2.shape[ii], arr1.shape[ii]))
+
+    return allFine
+
+# *******************************************************************************
+
+def getOptimizedScale(temp, rho, vlos, ltau, nDep2 = None, nthreads = 4, Tcut = 50000.0, ltau_cut = 2.0, smooth_window = 1):
+    
+    #
+    # Let's decide dtype based on temp
+    #
+    dtype = temp.dtype
+    if((dtype != 'float32') and (dtype != 'float64')):
+        dtype = 'float64'
+
+    #
+    # Check that arrays are contiguous in memory and
+    # all have the same dtype
+    #
+    temp1 = _checkArray(temp, dtype=dtype)
+    rho1  = _checkArray(rho, dtype=dtype)
+    vlos1  = _checkArray(vlos, dtype=dtype)
+    ltau1  = _checkArray(ltau, dtype=dtype)
+
+    # Check dimensions
+    if(not _checkDims(temp1, rho1, Name = "rho")): return None
+    if(not _checkDims(temp1, vlos1, Name = "vlos")): return None
+    if(not _checkDims(temp1, ltau1, Name = "ltau")): return None
+
+    
+    # Call C++ wrapper based on the type
+    if(dtype == 'float64'):
+        return pTau.OptimizeGradients_double(temp1, rho1, vlos1, ltau1, nthreads = int(nthreads), nDep2 = nDep2, Tcut = Tcut, ltau_cut = ltau_cut, smooth_window = int(smooth_window))
+    else:
+        return pTau.OptimizeGradients_float(temp1, rho1, vlos1, ltau1, nthreads = int(nthreads), nDep2 = nDep2, Tcut = Tcut, ltau_cut = ltau_cut, smooth_window = int(smooth_window))
+
+    
+# *******************************************************************************
+
+def OptimizeVariable(index, var, nthreads = 4, log = False):
+    #
+    # Let's decide dtype based on temp
+    #
+    dtype = var.dtype
+    if((dtype != 'float32') and (dtype != 'float64')):
+        dtype = 'float64'
+
+    #
+    # Check that arrays are contiguous in memory and
+    # all have the same dtype
+    #
+    var1  = _checkArray(var, dtype=dtype)
+    index1 = _checkArray(index, dtype=dtype)
+    
+    ## Check dimensions
+    #if(not _checkDims(var1, index1, Name = "index")): return None
+
+    # take the log?
+    if(log):
+        var1 = np.log(var1)
+    
+    # Call C++ wrapper based on the type
+    if(dtype == 'float64'):
+        res =  pTau.interpolate_gradient_double(index, var, nthreads = int(nthreads))
+    else:
+        res =  pTau.interpolate_gradient_float(index, var, nthreads = int(nthreads))
+
+    if(log):
+        res = np.exp(res)
+
+    return res
+        
+        
+# *******************************************************************************
