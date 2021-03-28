@@ -274,11 +274,11 @@ namespace gr{
     
     for(int kk=k0+1; kk<=k1; ++kk){
       T grad = std::abs(log10(temp[kk]) - log10(temp[kk-1])) * log11;
-      grad = std::max<T>(grad, std::abs(log10(rho[kk]) - log10(rho[kk-1])) * log11 );
+      grad = std::max<T>(grad, std::abs(log10(rho[kk]) - log10(rho[kk-1])) * log11);
       grad = std::max<T>(grad, std::abs(vlos[kk]  -  vlos[kk-1]) * vscal);
       grad = std::max<T>(grad, std::abs(ltau[kk] - ltau[kk-1]) * 10);
 
-      aind[kk-k0] = aind[kk-1] +  grad;
+      aind[kk-k0] = aind[kk-1-k0] + grad;
     }
     
     // --- smooth gradients and interpolate to new grid --- //
@@ -286,11 +286,10 @@ namespace gr{
     smooth_and_scale_gradients<T>(nIndex, aind, smooth_window, nIndex, k0);
     
     const T* const __restrict__ index_new = arange<T>(nDep2, k0, k1);
-    const T* const __restrict__ index = arange<T>(nIndex, k0, k1);
+    const T* const __restrict__ index     = arange<T>(nIndex, k0, k1);
 
     linear<T>(nIndex, index, aind, nDep2, index_new, res);
-    
-    
+
     delete [] aind;
     delete [] index_new;
     delete [] index;

@@ -128,6 +128,7 @@ def _checkArray(var, dtype = None):
     if((var.flags['C_CONTIGUOUS'] == True) and (var.dtype == dtype)):
         return var
     else:
+        print("_checkArray: making array contiguous in memory")
         return np.ascontiguousarray(var, dtype=dtype)
     
 # *******************************************************************************
@@ -150,15 +151,17 @@ def _checkDims(arr1, arr2, Name = ""):
 
 # *******************************************************************************
 
-def getOptimizedScale(temp, rho, vlos, ltau, nDep2 = None, nthreads = 4, Tcut = 50000.0, ltau_cut = 2.0, smooth_window = 1):
+def getOptimizedScale(temp, rho, vlos, ltau, nDep2 = None, nthreads = 4, Tcut = 50000.0, ltau_cut = 2.0, smooth_window = 1, dtype = None):
     
     #
     # Let's decide dtype based on temp
     #
-    dtype = temp.dtype
-    if((dtype != 'float32') and (dtype != 'float64')):
-        dtype = 'float64'
+    if(dtype is None):
+        dtype = temp.dtype
+        if((dtype != 'float32') and (dtype != 'float64')):
+            dtype = 'float64'
 
+    print("getOptimizedScale: dtype = {0}".format(dtype))
     #
     # Check that arrays are contiguous in memory and
     # all have the same dtype
@@ -173,6 +176,7 @@ def getOptimizedScale(temp, rho, vlos, ltau, nDep2 = None, nthreads = 4, Tcut = 
     if(not _checkDims(temp1, vlos1, Name = "vlos")): return None
     if(not _checkDims(temp1, ltau1, Name = "ltau")): return None
 
+    #set_trace()
     
     # Call C++ wrapper based on the type
     if(dtype == 'float64'):
@@ -207,9 +211,9 @@ def OptimizeVariable(index, var, nthreads = 4, log = False):
     
     # Call C++ wrapper based on the type
     if(dtype == 'float64'):
-        res =  pTau.interpolate_gradient_double(index, var, nthreads = int(nthreads))
+        res =  pTau.interpolate_gradient_double(index1, var1, nthreads = int(nthreads))
     else:
-        res =  pTau.interpolate_gradient_float(index, var, nthreads = int(nthreads))
+        res =  pTau.interpolate_gradient_float(index1, var1, nthreads = int(nthreads))
 
     if(log):
         res = np.exp(res)

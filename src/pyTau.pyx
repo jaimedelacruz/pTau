@@ -200,7 +200,8 @@ def OptimizeGradients_double(ar[double,ndim=3] temp, ar[double,ndim=3] rho, ar[d
     
     if(nDep2 is not None):
         nDep_new = int(nDep2)
-
+        
+    print("OptimizeGradients_double: ny={0}, nx={1}, nDep={2}, nDep2={3}".format(ny, nx, nDep, nDep_new))
     cdef ar[double,ndim = 3] res = zeros((ny, nx, nDep_new), dtype='float64', order='c')
 
     optimize_gradients_double(nPix, nDep, <double*>temp.data, <double*>ltau.data, <double*>rho.data, <double*>vlos.data, <int>smooth_window,
@@ -217,10 +218,12 @@ def OptimizeGradients_float(ar[float,ndim=3] temp, ar[float,ndim=3] rho, ar[floa
     cdef int nDep = temp.shape[2]
     cdef int nDep_new = nDep
     cdef int nPix = ny*nx
+
     
     if(nDep2 is not None):
         nDep_new = int(nDep2)
-
+        
+    print("OptimizeGradients_float: ny={0}, nx={1}, nDep={2}, nDep2={3}".format(ny, nx, nDep, nDep_new))
     cdef ar[float,ndim = 3] res = zeros((ny, nx, nDep_new), dtype='float32', order='c')
 
     optimize_gradients_float(nPix, nDep, <float*>temp.data, <float*>ltau.data, <float*>rho.data, <float*>vlos.data, <int>smooth_window,
