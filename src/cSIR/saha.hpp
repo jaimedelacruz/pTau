@@ -1,7 +1,13 @@
 #ifndef SAHAHPP
 #define SAHAHPP
 
-//#include "physical_constants.hpp"
+
+/* ---
+   The Saha equation.
+
+   Coded by J. de la Cruz Rodriguez (ISP-SU, 2021)
+  
+  --- */
 
 namespace sr{
   
@@ -18,8 +24,6 @@ namespace sr{
 								      (phyc::HH<double>*phyc::HH<double>), 1.5));
 
     return saha_const * (u2/u1) * Tg * Tg * sqrt(Tg) * exp(-(Eion_eV*phyc::EV<T>)/(phyc::BK<T>*Tg)) / Pe;
-    //T const theta=5040/Tg;
-    //return u2 * pow10__<T>(9.0805126f-theta*Eion_eV)/(u1*Pe*pow(theta,2.5f));
   }
   
   // ************************************************************************************** //

@@ -1,8 +1,13 @@
 #include <vector>
 #include <omp.h>
+/* ---
+  
+  Python tools for the computation of a Tau scale.
+  Coded by J. de la Cruz Rodriguez (ISP-SU, 2021)
+  
+  --- */
 
 #include "physical_constants.hpp"
-
 #include "cSIR/cSIR_eos.hpp"
 #include "cSIR/cSIR_cont.hpp"
 

@@ -1,6 +1,13 @@
 #ifndef CSIRCONT
 #define CSIRCONT
+/* ---
+   Continuum opacities, most of the opacity sources are extracted from 
+   the opacity package written by A. Asensio Ramos and ported to C++
+   by myself.
 
+   Coded by J. de la Cruz Rodriguez (ISP-SU, 2021)
+  
+  --- */
 #include <array>
 #include "physical_constants.hpp"
 #include "cSIR_eos.hpp"

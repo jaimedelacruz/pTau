@@ -1,5 +1,14 @@
 #ifndef CSIRATMHPP
 #define CSIRATMHPP
+/* ---
+
+   Wittmann/Mihalas-like EOS helper tools and PF.
+   Implementation extracted from the SIR code (Ruiz Cobo & del Toro Iniesta 1992)
+   with some improvements added, like the loweing of the ionization potential.
+
+   Coded by J. de la Cruz Rodriguez (ISP-SU, 2021)
+
+   --- */
 
 #include <cstdio>
 #include <vector>

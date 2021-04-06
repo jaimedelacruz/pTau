@@ -1,3 +1,10 @@
+/* ---
+  
+  Python tools for depth-scale optimization
+  Coded by J. de la Cruz Rodriguez (ISP-SU, 2021)
+  
+  --- */
+
 #include <vector>
 #include <cstring>
 #include <cstdio>
@@ -57,7 +64,7 @@ namespace gr{
   void hermitian(int const n, const T* const __restrict__ x, const T* const __restrict__ y,
 	       int const nn, const T* const __restrict__ xx,  T* const  __restrict__ yy)
   {
-
+    
     // --- Get derivatives --- //
     
     T* __restrict__ yp = new T [n]();
@@ -99,6 +106,7 @@ namespace gr{
       for(int jj=off1; jj != jj1; jj += djj){
 	
 	// --- clip value to the existing data range, it will repeat edge values automatically --- //
+	
 	T const ixx = std::max<T>(std::min<T>(xx[jj], x[kk1-dkk]), x[kk0+dkk]);
 	  
 	if((ixx >= x[kk-dkk]) && (ixx <= x[kk])){
