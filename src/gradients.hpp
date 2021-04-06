@@ -6,6 +6,9 @@
 namespace gr{
 
 
+  template<typename T> inline
+  constexpr T SQ(T const& var){return var*var;}
+  
   // ********************************************************************************* //
 
   template<class T> inline T signFortran(T const &val)
@@ -192,8 +195,8 @@ namespace gr{
       std::memcpy(&d_orig[w2], d, sizeof(T)*N);
       
       for(int ii=0; ii<w2; ++ii){
-	d_orig[ii]      = d[0];
-	d_orig[ii+Nw2]  = d[N1]; 
+	d_orig[w2-ii-1] = d[ii];
+	d_orig[Nw2+w2-ii-1]  = d[N1-w2+ii]; 
       }
       
       
@@ -239,14 +242,14 @@ namespace gr{
   template<typename T> inline
   void optimizeGradients_one(int const nDep, const T* const __restrict__ temp, const T* const __restrict__ ltau,
 			     const T* const __restrict__ rho, const T* const __restrict__ vlos, int const smooth_window,
-			     T const Tcut, T const tau_cut, int const nDep2, T* const __restrict__ res)
+			     T const Tcut, T const tau_cut, int const nDep2, T* const __restrict__ res, T const vel_scal)
 
   {
 
     // --- scaling rules --- //
 
-    static const double log11 = 1 / log10(1.1);
-    constexpr static const double vscal = 1.0E-5 / 2.0;
+    static const T log11 = 1 / log10(1.1);
+    const T vscal = 1.0 / vel_scal;
 
 
     // --- detect limits --- //
@@ -271,25 +274,26 @@ namespace gr{
     int const kk0 = k0;
     
     T* const __restrict__ aind = new T [nIndex]();
-    
-    for(int kk=k0+1; kk<=k1; ++kk){
-      T grad = std::abs(log10(temp[kk]) - log10(temp[kk-1])) * log11;
-      grad = std::max<T>(grad, std::abs(log10(rho[kk]) - log10(rho[kk-1])) * log11);
-      grad = std::max<T>(grad, std::abs(vlos[kk]  -  vlos[kk-1]) * vscal);
-      grad = std::max<T>(grad, std::abs(ltau[kk] - ltau[kk-1]) * 10);
 
-      aind[kk-k0] = aind[kk-1-k0] + grad;
+    for(int kk=k0+1; kk<=k1; ++kk){
+      T const grad = std::abs(log10(temp[kk]) - log10(temp[kk-1])) * log11;
+      T const grad1 = std::abs(log10(rho[kk]) - log10(rho[kk-1])) * log11 * 0.5;
+      T const grad2 = (std::abs(vlos[kk]  -  vlos[kk-1]) *1.e-5) * vscal;
+      T const grad3 = std::abs((ltau[kk] - ltau[kk-1]) * 7);
+
+      aind[kk-k0]   = aind[kk-k0-1] + std::max(std::max(std::max(grad, grad1), grad2), grad3);
     }
-    
+
     // --- smooth gradients and interpolate to new grid --- //
     
-    smooth_and_scale_gradients<T>(nIndex, aind, smooth_window, nIndex, k0);
+    smooth_and_scale_gradients<T>(nIndex, aind, smooth_window, nIndex-1, k0);
     
     const T* const __restrict__ index_new = arange<T>(nDep2, k0, k1);
     const T* const __restrict__ index     = arange<T>(nIndex, k0, k1);
 
-    linear<T>(nIndex, index, aind, nDep2, index_new, res);
+    linear<T>(nIndex, aind, index, nDep2, index_new, res);
 
+    
     delete [] aind;
     delete [] index_new;
     delete [] index;
@@ -300,19 +304,19 @@ namespace gr{
   template<typename T> inline
   void optimizeGradients(int const nPix, int const nDep, const T* const __restrict__ temp, const T* const __restrict__ ltau,
 			 const T* const __restrict__ rho, const T* const __restrict__ vlos, int const smooth_window,
-			 T const Tcut, T const tau_cut, int const nthreads, int const nDep2, T* const __restrict__ res)
+			 T const Tcut, T const tau_cut, int const nthreads, int const nDep2, T* const __restrict__ res, T const vel_scal)
     
   {
     
     int ipix = 0;
-    
+    fprintf(stderr,"optimizeGradients: vel_scal = %lf\n", double(vel_scal));
 #pragma omp parallel default(shared) firstprivate(ipix) num_threads(nthreads)
     {
 #pragma omp for schedule(static)
       for(ipix=0; ipix<nPix; ++ipix){
 	
 	optimizeGradients_one<T>(nDep, &temp[nDep*ipix], &ltau[nDep*ipix], &rho[nDep*ipix], &vlos[nDep*ipix],
-				 smooth_window, Tcut, tau_cut, nDep2, &res[nDep2*ipix]);
+				 smooth_window, Tcut, tau_cut, nDep2, &res[nDep2*ipix], vel_scal);
 	
       } // ipix
     } // parallel block
@@ -324,8 +328,8 @@ namespace gr{
   void interpolateGradient_one(int const nDep, const T* const __restrict__ var, int const nDep2, const T* const __restrict__ index,
 				const T* const __restrict__ index_new, T* const __restrict__ res)
   {
-    //linear<T>(nDep, index, var, nDep2, index_new, res);
-    hermitian<T>(nDep, index, var, nDep2, index_new, res); 
+    linear<T>(nDep, index, var, nDep2, index_new, res);
+    //hermitian<T>(nDep, index, var, nDep2, index_new, res); 
 
   }
   

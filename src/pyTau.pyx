@@ -39,11 +39,11 @@ cdef extern from "pTau.hpp":
 cdef extern from "gradients.hpp":
     cdef void optimize_gradients_float "gr::optimizeGradients<float>"(int nPix, int nDep, const float* const temp, const float* const ltau,
                                                                       const float* const rho, const float* const vlos, int smooth_window,
-                                                                      float Tcut, float tau_cut, int nthreads, int nDep2, float* const res)
+                                                                      float Tcut, float tau_cut, int nthreads, int nDep2, float* const res, float vel_scal)
 
     cdef void optimize_gradients_double "gr::optimizeGradients<double>"(int nPix, int nDep, const double* const temp, const double* const ltau,
                                                                         const double* const rho, const double* const vlos, int smooth_window,
-                                                                        double Tcut, double tau_cut, int nthreads, int nDep2, double* const res)
+                                                                        double Tcut, double tau_cut, int nthreads, int nDep2, double* const res, double vel_scal)
     
     cdef void interpolateGradient_double "gr::interpolateGradient<double>"(int  nPix, int nDep, const double* const  var, int  nDep2,
                                                                            const double* const  index, const double* const index_new, double* const res,
@@ -190,13 +190,17 @@ def getTau_double(ar[double,ndim=3] z, ar[double, ndim=3] alpha, int nthreads=4)
 
 # ***********************************************************************************************
 
-def OptimizeGradients_double(ar[double,ndim=3] temp, ar[double,ndim=3] rho, ar[double,ndim=3] vlos, ar[double, ndim=3] ltau, int nthreads=4, nDep2 = None, int smooth_window = 1, double Tcut = 50000.0, double ltau_cut = 2.0):
+def OptimizeGradients_double(ar[double,ndim=3] temp, ar[double,ndim=3] rho, ar[double,ndim=3] vlos, ar[double, ndim=3] ltau, int nthreads=4, nDep2 = None, int smooth_window = 1, double Tcut = 50000.0, double ltau_cut = 2.0, double vel_scal=4.0):
 
     cdef int ny = temp.shape[0]
     cdef int nx = temp.shape[1]
     cdef int nDep = temp.shape[2]
     cdef int nDep_new = nDep
     cdef int nPix = ny*nx
+    
+    cdef double vel_scal_checked = <double>vel_scal
+    if(vel_scal_checked <= 1.e-10):
+        vel_scal_checked = 1.e-10
     
     if(nDep2 is not None):
         nDep_new = int(nDep2)
@@ -205,13 +209,13 @@ def OptimizeGradients_double(ar[double,ndim=3] temp, ar[double,ndim=3] rho, ar[d
     cdef ar[double,ndim = 3] res = zeros((ny, nx, nDep_new), dtype='float64', order='c')
 
     optimize_gradients_double(nPix, nDep, <double*>temp.data, <double*>ltau.data, <double*>rho.data, <double*>vlos.data, <int>smooth_window,
-                              <double>Tcut, <double>ltau_cut, <int>nthreads, <int>nDep_new, <double*>res.data)
+                              <double>Tcut, <double>ltau_cut, <int>nthreads, <int>nDep_new, <double*>res.data, <double>vel_scal)
 
     return res
 
 # ***********************************************************************************************
 
-def OptimizeGradients_float(ar[float,ndim=3] temp, ar[float,ndim=3] rho, ar[float,ndim=3] vlos, ar[float, ndim=3] ltau, int nthreads=4, nDep2 = None, int smooth_window = 1, float Tcut = 50000.0, float ltau_cut = 2.0):
+def OptimizeGradients_float(ar[float,ndim=3] temp, ar[float,ndim=3] rho, ar[float,ndim=3] vlos, ar[float, ndim=3] ltau, int nthreads=4, nDep2 = None, int smooth_window = 1, float Tcut = 50000.0, float ltau_cut = 2.0, float vel_scal = 4.0):
 
     cdef int ny = temp.shape[0]
     cdef int nx = temp.shape[1]
@@ -219,6 +223,9 @@ def OptimizeGradients_float(ar[float,ndim=3] temp, ar[float,ndim=3] rho, ar[floa
     cdef int nDep_new = nDep
     cdef int nPix = ny*nx
 
+    cdef float vel_scal_checked = <float>vel_scal
+    if(vel_scal_checked <= 1.e-10):
+        vel_scal_checked = 1.e-10
     
     if(nDep2 is not None):
         nDep_new = int(nDep2)
@@ -227,7 +234,7 @@ def OptimizeGradients_float(ar[float,ndim=3] temp, ar[float,ndim=3] rho, ar[floa
     cdef ar[float,ndim = 3] res = zeros((ny, nx, nDep_new), dtype='float32', order='c')
 
     optimize_gradients_float(nPix, nDep, <float*>temp.data, <float*>ltau.data, <float*>rho.data, <float*>vlos.data, <int>smooth_window,
-                              <float>Tcut, <float>ltau_cut, <int>nthreads, <int>nDep_new, <float*>res.data)
+                              <float>Tcut, <float>ltau_cut, <int>nthreads, <int>nDep_new, <float*>res.data, <float>vel_scal_checked)
 
     return res
 

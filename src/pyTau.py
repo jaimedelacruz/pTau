@@ -151,7 +151,7 @@ def _checkDims(arr1, arr2, Name = ""):
 
 # *******************************************************************************
 
-def getOptimizedScale(temp, rho, vlos, ltau, nDep2 = None, nthreads = 4, Tcut = 50000.0, ltau_cut = 2.0, smooth_window = 1, dtype = None):
+def getOptimizedScale(temp, rho, vlos, ltau, nDep2 = None, nthreads = 4, Tcut = 50000.0, ltau_cut = 2.0, smooth_window = 1, dtype = None, vel_scal = 4.0):
     
     #
     # Let's decide dtype based on temp
@@ -180,9 +180,9 @@ def getOptimizedScale(temp, rho, vlos, ltau, nDep2 = None, nthreads = 4, Tcut = 
     
     # Call C++ wrapper based on the type
     if(dtype == 'float64'):
-        return pTau.OptimizeGradients_double(temp1, rho1, vlos1, ltau1, nthreads = int(nthreads), nDep2 = nDep2, Tcut = Tcut, ltau_cut = ltau_cut, smooth_window = int(smooth_window))
+        return pTau.OptimizeGradients_double(temp1, rho1, vlos1, ltau1, nthreads = int(nthreads), nDep2 = nDep2, Tcut = Tcut, ltau_cut = ltau_cut, smooth_window = int(smooth_window), vel_scal = vel_scal)
     else:
-        return pTau.OptimizeGradients_float(temp1, rho1, vlos1, ltau1, nthreads = int(nthreads), nDep2 = nDep2, Tcut = Tcut, ltau_cut = ltau_cut, smooth_window = int(smooth_window))
+        return pTau.OptimizeGradients_float(temp1, rho1, vlos1, ltau1, nthreads = int(nthreads), nDep2 = nDep2, Tcut = Tcut, ltau_cut = ltau_cut, smooth_window = int(smooth_window), vel_scal = vel_scal)
 
     
 # *******************************************************************************
