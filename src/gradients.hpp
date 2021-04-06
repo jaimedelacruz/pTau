@@ -249,7 +249,7 @@ namespace gr{
     // --- scaling rules --- //
 
     static const T log11 = 1 / log10(1.1);
-    const T vscal = 1.0 / vel_scal;
+    const T vscal = 1.0e-5 / vel_scal;
 
 
     // --- detect limits --- //
@@ -276,9 +276,9 @@ namespace gr{
     T* const __restrict__ aind = new T [nIndex]();
 
     for(int kk=k0+1; kk<=k1; ++kk){
-      T const grad = std::abs(log10(temp[kk]) - log10(temp[kk-1])) * log11;
+      T const grad  = std::abs(log10(temp[kk]) - log10(temp[kk-1])) * log11;
       T const grad1 = std::abs(log10(rho[kk]) - log10(rho[kk-1])) * log11 * 0.5;
-      T const grad2 = (std::abs(vlos[kk]  -  vlos[kk-1]) *1.e-5) * vscal;
+      T const grad2 = std::abs(vlos[kk]  -  vlos[kk-1]) * vscal;
       T const grad3 = std::abs((ltau[kk] - ltau[kk-1]) * 7);
 
       aind[kk-k0]   = aind[kk-k0-1] + std::max(std::max(std::max(grad, grad1), grad2), grad3);
