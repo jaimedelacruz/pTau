@@ -34,7 +34,7 @@ def getContinuumOpacity(Tg, Pg = None, rho = None, nthreads=4, wav=[5000.0]):
     
     tcont =  Tg.flags['C_CONTIGUOUS']
     if(not tcont):
-        temp = np.ascontiguousarray(tcont, order='c')
+        temp = np.ascontiguousarray(Tg)
     else:
         temp = Tg
 
@@ -46,7 +46,7 @@ def getContinuumOpacity(Tg, Pg = None, rho = None, nthreads=4, wav=[5000.0]):
     if(Pg is not None):
         pcont = Pg.flags['C_CONTIGUOUS']
         if(not pcont):
-            pgas = np.ascontiguousarray(Pg, order='c')
+            pgas = np.ascontiguousarray(Pg)
         else:
             pgas = Pg
 
@@ -63,7 +63,7 @@ def getContinuumOpacity(Tg, Pg = None, rho = None, nthreads=4, wav=[5000.0]):
         
         rcont = rho.flags['C_CONTIGUOUS']
         if(not rcont):
-            r = np.ascontiguousarray(rho, order='c')
+            r = np.ascontiguousarray(rho)
         else:
             r = rho
 
