@@ -151,8 +151,29 @@ def _checkDims(arr1, arr2, Name = ""):
 
 # *******************************************************************************
 
-def getOptimizedScale(temp, rho, vlos, ltau, nDep2 = None, nthreads = 4, Tcut = 50000.0, ltau_cut = 2.0, smooth_window = 1, dtype = None, vel_scal = 4.0):
-    
+def getOptimizedScale(temp, rho, vlos, ltau, nDep2 = None, nthreads = 4, Tcut = 50000.0, ltau_cut = 2.0, smooth_window = 1, dtype = None, vel_scal = 2.0):
+    """
+    getOptimizedScale computes an optimal depth-scale for radiative transfer calculations attending
+    to gradients in temperature, mass density, line-of-sight velocity and optical depth-scale.
+
+    Returns a cube (ny, nx, nDep) with the optimized grid in index numbers.
+
+    input:
+         temp: 3D numpy array (ny, nx, ndep) with the gas temperature. Units: [K]
+          rho: 3D numpy array (ny, nx, ndep) with the mass density. Units: [gr/cm**3]
+         vlos: 3D numpy array (ny, nx, ndep) with the line-of-sight velocity. Units: [cm/s]
+         ltau: 3D numpy array (ny, nx, ndep) with the optical-depth scale at 500 nm.
+
+    Keywords:
+     nthreads: number of threads to use.
+         Tcut: temperature cut to clip the corona.
+     ltau_cut: log_tau cut threshold for the inner photosphere.
+     smooth_window: smooth_width (pixels) for the gradients. Not recommended to use more than 1,3 or 5.
+        dtype: Force a floating point precision for the calculations (default extracted from temp array)
+     vel_scal: scaling factor for the velocity gradients, in km/s. The smaller this number, the more importance
+               velocity gradients get in the relative weighting.
+
+    """
     #
     # Let's decide dtype based on temp
     #
@@ -188,6 +209,14 @@ def getOptimizedScale(temp, rho, vlos, ltau, nDep2 = None, nthreads = 4, Tcut = 
 # *******************************************************************************
 
 def OptimizeVariable(index, var, nthreads = 4, log = False):
+    """
+    OptimizeVariable applies the grid computed by getOptimizedScale to a given variable.
+    Input:
+          index: 3D numpy array (ny, nx, nDep) with the optimized grid.
+            var: 3D numpy array (ny, nx, nDep) with the variable that will be interpolated.
+       nthreads: number of threads to use in the interpolation
+            log: perform the log before interpolating. Can be needed when running in float32 with rho and pgas.
+    """
     #
     # Let's decide dtype based on temp
     #
@@ -221,4 +250,49 @@ def OptimizeVariable(index, var, nthreads = 4, log = False):
     return res
         
         
+# *******************************************************************************
+
+def getNe(temp, Rho = None, Pg = None, nthreads=8, dtype=None):
+    """
+    getNe computes the electron density in LTE from a pair Temperature-Pgas or Temperature-Rho.
+    Input:
+         temp: 3D numpy array (ny, nx, ndep) with the gas temperature. Units: [K]
+          Rho: 3D numpy array (ny, nx, ndep) with the mass density. Units: [gr/cm**3]
+           Pg: 3D numpy array (ny, nx, ndep) with the gas pressure. Units: [Ba]
+
+     nthreads: number of threads
+        dtype: force a floating point precision. Otherwise the one from temp will be used
+
+    """
+    if((Rho is None) and (Pg is None)):
+        print("getNe: Error, you must provide Rho or Pgas, exiting...")
+        return None
+
+
+    if(dtype is None):
+        dtype = temp.dtype
+        if((dtype != 'float32') and (dtype != 'float64')):
+            dtype = 'float64'
+
+
+    temp1  = _checkArray(temp, dtype=dtype)
+
+    if(Pg is not None):
+        Pg1  = _checkArray(Pg, dtype=dtype)
+        if(not _checkDims(temp1, Pg1, Name = "Pg")): return None
+
+        if(dtype == 'float64'):
+            return pTau.getNePg_double(temp1, Pg1, nthreads=int(nthreads))
+        else:
+            return pTau.getNePg_float(temp1, Pg1, nthreads=int(nthreads))
+
+    else:
+        Rho1  = _checkArray(Rho, dtype=dtype)
+        if(not _checkDims(temp1, Rho1, Name = "Rho")): return None
+        
+        if(dtype == 'float64'):
+            return pTau.getNeRho_double(temp1, Rho1, nthreads=int(nthreads))
+        else:
+            return pTau.getNeRho_float(temp1, Rho1, nthreads=int(nthreads))
+
 # *******************************************************************************

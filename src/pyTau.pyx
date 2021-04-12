@@ -36,6 +36,13 @@ cdef extern from "pTau.hpp":
     cdef void getAlpha_T_Pg_float "getAlpha_T_Pg<float>"(long ntot, const float* const Tg, const float* const Pg,
 		    int  nLambda, const double* const  lambd, double* const alpha, int  nthreads)
 
+    cdef void get_Ne_T_Rho_float  "get_Ne_T_Rho<float>" (long ntot, const float* const Tg, const float* const Rho, float* const Ne, int nthreads)
+    cdef void get_Ne_T_Rho_double "get_Ne_T_Rho<double>"(long ntot, const double* const Tg, const double* const Rho, double* const Ne, int nthreads)
+    
+    cdef void get_Ne_T_Pg_float  "get_Ne_T_Pg<float>" (long ntot, const float* const Tg, const float* const Pg, float* const Ne, int nthreads)
+    cdef void get_Ne_T_Pg_double "get_Ne_T_Pg<double>"(long ntot, const double* const Tg, const double* const Pg, double* const Ne, int nthreads)
+
+    
 cdef extern from "gradients.hpp":
     cdef void optimize_gradients_float "gr::optimizeGradients<float>"(int nPix, int nDep, const float* const temp, const float* const ltau,
                                                                       const float* const rho, const float* const vlos, int smooth_window,
@@ -275,3 +282,66 @@ def interpolate_gradient_float(ar[float, ndim=3] index_new, ar[float, ndim=3] va
 
 # ***********************************************************************************************
 
+def getNePg_double(ar[double,ndim=3] Tg, ar[double,ndim=3] Pg, int nthreads=8):
+
+    cdef int ny = Tg.shape[0]
+    cdef int nx = Tg.shape[1]
+    cdef int nDep=Tg.shape[2]
+    
+    cdef long nTot = <long>(ny*nx)*<long>nDep
+    cdef ar[double, ndim=3] Ne = zeros((ny, nx, nDep), dtype='float64', order='c')
+
+
+    get_Ne_T_Pg_double(nTot, <double*>Tg.data, <double*>Pg.data, <double*>Ne.data, <int>nthreads)
+    
+    return Ne
+
+# ***********************************************************************************************
+
+def getNePg_float(ar[float,ndim=3] Tg, ar[float,ndim=3] Pg, int nthreads=8):
+
+    cdef int ny = Tg.shape[0]
+    cdef int nx = Tg.shape[1]
+    cdef int nDep=Tg.shape[2]
+    
+    cdef long nTot = <long>(ny*nx)*<long>nDep
+    cdef ar[float, ndim=3] Ne = zeros((ny, nx, nDep), dtype='float32', order='c')
+
+
+    get_Ne_T_Pg_float(nTot, <float*>Tg.data, <float*>Pg.data, <float*>Ne.data, <int>nthreads)
+    
+    return Ne
+
+# ***********************************************************************************************
+
+def getNeRho_double(ar[double,ndim=3] Tg, ar[double,ndim=3] Rho, int nthreads=8):
+
+    cdef int ny = Tg.shape[0]
+    cdef int nx = Tg.shape[1]
+    cdef int nDep=Tg.shape[2]
+    
+    cdef long nTot = <long>(ny*nx)*<long>nDep
+    cdef ar[double, ndim=3] Ne = zeros((ny, nx, nDep), dtype='float64', order='c')
+
+
+    get_Ne_T_Rho_double(nTot, <double*>Tg.data, <double*>Rho.data, <double*>Ne.data, <int>nthreads)
+    
+    return Ne
+
+# ***********************************************************************************************
+
+def getNeRho_float(ar[float,ndim=3] Tg, ar[float,ndim=3] Rho, int nthreads=8):
+
+    cdef int ny = Tg.shape[0]
+    cdef int nx = Tg.shape[1]
+    cdef int nDep=Tg.shape[2]
+    
+    cdef long nTot = <long>(ny*nx)*<long>nDep
+    cdef ar[float, ndim=3] Ne = zeros((ny, nx, nDep), dtype='float32', order='c')
+
+
+    get_Ne_T_Rho_float(nTot, <float*>Tg.data, <float*>Rho.data, <float*>Ne.data, <int>nthreads)
+    
+    return Ne
+
+# ***********************************************************************************************
