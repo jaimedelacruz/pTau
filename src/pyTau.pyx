@@ -42,15 +42,19 @@ cdef extern from "pTau.hpp":
     cdef void get_Ne_T_Pg_float  "get_Ne_T_Pg<float>" (long ntot, const float* const Tg, const float* const Pg, float* const Ne, int nthreads)
     cdef void get_Ne_T_Pg_double "get_Ne_T_Pg<double>"(long ntot, const double* const Tg, const double* const Pg, double* const Ne, int nthreads)
 
-    
+    cdef void getH_double "getH<double>"(long nTotal, long nH, const double* const Tg, const double* const Pg, const double* const  Ne, double* const Hpop, int  nthreads)
+    cdef void getH_float "getH<float>"(long nTotal, long nH, const float* const Tg, const float* const Pg, const float* const  Ne, double* const Hpop, int  nthreads)
+
 cdef extern from "gradients.hpp":
     cdef void optimize_gradients_float "gr::optimizeGradients<float>"(int nPix, int nDep, const float* const temp, const float* const ltau,
                                                                       const float* const rho, const float* const vlos, int smooth_window,
-                                                                      float Tcut, float tau_cut, int nthreads, int nDep2, float* const res, float vel_scal)
+                                                                      float Tcut, float tau_cut, int nthreads, int nDep2, float* const res, float vel_scal,
+                                                                      float ltau_top)
 
     cdef void optimize_gradients_double "gr::optimizeGradients<double>"(int nPix, int nDep, const double* const temp, const double* const ltau,
                                                                         const double* const rho, const double* const vlos, int smooth_window,
-                                                                        double Tcut, double tau_cut, int nthreads, int nDep2, double* const res, double vel_scal)
+                                                                        double Tcut, double tau_cut, int nthreads, int nDep2, double* const res, double vel_scal,
+                                                                        double ltau_top)
     
     cdef void interpolateGradient_double "gr::interpolateGradient<double>"(int  nPix, int nDep, const double* const  var, int  nDep2,
                                                                            const double* const  index, const double* const index_new, double* const res,
@@ -99,7 +103,6 @@ def getBackgroundOpacityPgas_double(ar[double,ndim=3] Tg, ar[double,ndim=3] Pg, 
     cdef long ntot = (<long>(nx*ny)) * nDep;
 
     cdef ar[double, ndim=1] wav1 = wav * 1.e-8 # to cm
-
     
     # Allocate result
     cdef ar[double, ndim=4] alpha = zeros((ny,nx,nDep,nwav), dtype='float64', order='c')
@@ -197,7 +200,7 @@ def getTau_double(ar[double,ndim=3] z, ar[double, ndim=3] alpha, int nthreads=4)
 
 # ***********************************************************************************************
 
-def OptimizeGradients_double(ar[double,ndim=3] temp, ar[double,ndim=3] rho, ar[double,ndim=3] vlos, ar[double, ndim=3] ltau, int nthreads=4, nDep2 = None, int smooth_window = 1, double Tcut = 50000.0, double ltau_cut = 2.0, double vel_scal=4.0):
+def OptimizeGradients_double(ar[double,ndim=3] temp, ar[double,ndim=3] rho, ar[double,ndim=3] vlos, ar[double, ndim=3] ltau, int nthreads=4, nDep2 = None, int smooth_window = 1, double Tcut = 50000.0, double ltau_cut = 2.0, double vel_scal=4.0, double ltau_top = -15.0):
 
     cdef int ny = temp.shape[0]
     cdef int nx = temp.shape[1]
@@ -216,13 +219,13 @@ def OptimizeGradients_double(ar[double,ndim=3] temp, ar[double,ndim=3] rho, ar[d
     cdef ar[double,ndim = 3] res = zeros((ny, nx, nDep_new), dtype='float64', order='c')
 
     optimize_gradients_double(nPix, nDep, <double*>temp.data, <double*>ltau.data, <double*>rho.data, <double*>vlos.data, <int>smooth_window,
-                              <double>Tcut, <double>ltau_cut, <int>nthreads, <int>nDep_new, <double*>res.data, <double>vel_scal)
+                              <double>Tcut, <double>ltau_cut, <int>nthreads, <int>nDep_new, <double*>res.data, <double>vel_scal_checked, <double>ltau_top)
 
     return res
 
 # ***********************************************************************************************
 
-def OptimizeGradients_float(ar[float,ndim=3] temp, ar[float,ndim=3] rho, ar[float,ndim=3] vlos, ar[float, ndim=3] ltau, int nthreads=4, nDep2 = None, int smooth_window = 1, float Tcut = 50000.0, float ltau_cut = 2.0, float vel_scal = 4.0):
+def OptimizeGradients_float(ar[float,ndim=3] temp, ar[float,ndim=3] rho, ar[float,ndim=3] vlos, ar[float, ndim=3] ltau, int nthreads=4, nDep2 = None, int smooth_window = 1, float Tcut = 50000.0, float ltau_cut = 2.0, float vel_scal = 4.0, float ltau_top = -15.0):
 
     cdef int ny = temp.shape[0]
     cdef int nx = temp.shape[1]
@@ -241,7 +244,7 @@ def OptimizeGradients_float(ar[float,ndim=3] temp, ar[float,ndim=3] rho, ar[floa
     cdef ar[float,ndim = 3] res = zeros((ny, nx, nDep_new), dtype='float32', order='c')
 
     optimize_gradients_float(nPix, nDep, <float*>temp.data, <float*>ltau.data, <float*>rho.data, <float*>vlos.data, <int>smooth_window,
-                              <float>Tcut, <float>ltau_cut, <int>nthreads, <int>nDep_new, <float*>res.data, <float>vel_scal_checked)
+                              <float>Tcut, <float>ltau_cut, <int>nthreads, <int>nDep_new, <float*>res.data, <float>vel_scal_checked, <float>ltau_top)
 
     return res
 
@@ -343,5 +346,37 @@ def getNeRho_float(ar[float,ndim=3] Tg, ar[float,ndim=3] Rho, int nthreads=8):
     get_Ne_T_Rho_float(nTot, <float*>Tg.data, <float*>Rho.data, <float*>Ne.data, <int>nthreads)
     
     return Ne
+
+# ***********************************************************************************************
+
+def getHpops_double(ar[double,ndim=3] Tg, ar[double,ndim=3] Pg, ar[double,ndim=3] Ne, int nH = 6, int nthreads = 8):
+    
+    cdef int ny = Tg.shape[0]
+    cdef int nx = Tg.shape[1]
+    cdef int nz = Tg.shape[2]
+    cdef long nTot = <long>(ny*nx) * <long>nz
+    cdef long nHl  = <long>nH
+    
+    cdef ar[double,ndim=4] H = zeros((ny,nx,nz,nHl), dtype='float64', order='c')
+    
+    getH_double(nTot, nHl, <double*>Tg.data, <double*>Pg.data, <double*>Ne.data, <double*>H.data, <int>nthreads)
+
+    return H
+
+# ***********************************************************************************************
+
+def getHpops_float(ar[float,ndim=3] Tg, ar[float,ndim=3] Pg, ar[float,ndim=3] Ne, int nH = 6, int nthreads = 8):
+    
+    cdef int ny = Tg.shape[0]
+    cdef int nx = Tg.shape[1]
+    cdef int nz = Tg.shape[2]
+    cdef long nTot = <long>(ny*nx) * <long>nz
+    cdef long nHl  = <long>nH
+    
+    cdef ar[double,ndim=4] H = zeros((ny,nx,nz,nHl), dtype='float64', order='c')
+    
+    getH_float(nTot, nHl, <float*>Tg.data, <float*>Pg.data, <float*>Ne.data, <double*>H.data, <int>nthreads)
+
+    return H
 
 # ***********************************************************************************************

@@ -250,7 +250,8 @@ namespace gr{
   template<typename T> inline
   void optimizeGradients_one(int const nDep, const T* const __restrict__ temp, const T* const __restrict__ ltau,
 			     const T* const __restrict__ rho, const T* const __restrict__ vlos, int const smooth_window,
-			     T const Tcut, T const tau_cut, int const nDep2, T* const __restrict__ res, T const vel_scal)
+			     T const Tcut, T const tau_cut, int const nDep2, T* const __restrict__ res, T const vel_scal,
+			     T const ltau_top)
 
   {
 
@@ -267,6 +268,16 @@ namespace gr{
       if((temp[ii] >= Tcut)) k0 = ii;
       else break;
     }
+
+    // --- Now check ltau top --- //
+    if(ltau_top > -14.99)
+      for(int ii=0; ii<nDep; ++ii){
+	if(ltau[ii] <= ltau_top) k0 = ii;
+	else break;
+      }
+    
+
+    
     for(int ii=0; ii<nDep; ++ii){
       if(ltau[ii] <= tau_cut) k1 = ii;
       else break;
@@ -274,6 +285,14 @@ namespace gr{
     
     k1 = std::min(k1 + 1, nDep-1);
     int const nIndex = k1 - k0 + 1;
+
+    
+    if(nIndex < 1){
+      for(int zz=0; zz<nDep; ++zz)
+	fprintf(stderr,"%4d %e %e %e\n", zz, temp[zz], ltau[zz], rho[zz]);
+	  exit(1);
+    }
+
 
     
     // --- Measure gradients --- //
@@ -285,11 +304,16 @@ namespace gr{
 
     for(int kk=k0+1; kk<=k1; ++kk){
       T const grad  = std::abs(log10(temp[kk]) - log10(temp[kk-1])) * log11;
-      T const grad1 = std::abs(log10(rho[kk]) - log10(rho[kk-1])) * log11 / 2;
+      T const grad1 = std::abs(log10(rho[kk]) - log10(rho[kk-1])) * log11/1.5;
       T const grad2 = std::abs(vlos[kk]  -  vlos[kk-1]) * vscal;
-      T const grad3 = std::abs((ltau[kk] - ltau[kk-1]) * 7);
+      T const grad3 = std::abs((ltau[kk] - ltau[kk-1]) * log11);
 
-      aind[kk-k0]   = aind[kk-k0-1] + std::max(std::max(std::max(grad, grad1), grad2), grad3);
+      if(temp[kk] <= Tcut){
+	aind[kk-k0]   = aind[kk-k0-1] + std::max(std::max(std::max(grad, grad1), grad2), grad3);
+      }else{
+	aind[kk-k0]   = aind[kk-k0-1] + std::max(std::max(std::max(grad, grad1), grad2/10), grad3);
+
+      }
     }
 
     // --- smooth gradients and interpolate to new grid --- //
@@ -312,7 +336,8 @@ namespace gr{
   template<typename T> inline
   void optimizeGradients(int const nPix, int const nDep, const T* const __restrict__ temp, const T* const __restrict__ ltau,
 			 const T* const __restrict__ rho, const T* const __restrict__ vlos, int const smooth_window,
-			 T const Tcut, T const tau_cut, int const nthreads, int const nDep2, T* const __restrict__ res, T const vel_scal)
+			 T const Tcut, T const tau_cut, int const nthreads, int const nDep2, T* const __restrict__ res, T const vel_scal,
+			 T const ltau_top)
     
   {
     
@@ -324,7 +349,7 @@ namespace gr{
       for(ipix=0; ipix<nPix; ++ipix){
 	
 	optimizeGradients_one<T>(nDep, &temp[nDep*ipix], &ltau[nDep*ipix], &rho[nDep*ipix], &vlos[nDep*ipix],
-				 smooth_window, Tcut, tau_cut, nDep2, &res[nDep2*ipix], vel_scal);
+				 smooth_window, Tcut, tau_cut, nDep2, &res[nDep2*ipix], vel_scal, ltau_top);
 	
       } // ipix
     } // parallel block

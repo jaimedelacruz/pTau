@@ -24,7 +24,7 @@ namespace sr{
     // INPUT:
     // T :   temperature in K (1400 < T < 100080)
     // Ne:   electron density
-    // lam0: lambda_0 in [m]
+    // lam0: lambda_0 in [cm]
     //
     // Modifications:
     //              JdlCR: adapted to use SI units if needed (if BA_TO_PA != 1 and CM_TO_M != 1)
@@ -51,13 +51,13 @@ namespace sr{
     constexpr static T const dNein_dNE =  1/phyc::CM3_TO_M3<T>;
     
     T const KT = Tg * BK; // in erg
-    
-    if(lam0 < 1800e-10f){
+    T const lambda = lam0 * 1.e4f / phyc::CM_TO_M<T>; // to microns
+
+    if(lambda < 0.18){
       dTg = 0; dNe = 0;
       return static_cast<T>(0);
     }
     
-    T const lambda = lam0 * 1.e4f / phyc::CM_TO_M<T>; // to microns
     T const lambda2 = lambda*lambda;
 
     T const theta  = 5040 / Tg;
@@ -115,11 +115,11 @@ namespace sr{
     // INPUT:
     //      T : temperature in K
     //	    Pe: electron density
-    //	    lambda: wavelength in m 
+    //	    lambda: wavelength in cm 
     // -----------------------------------------------------------------
     using namespace phyc;
     constexpr static const T lambda0 = 1.6419; // [microns]
-    constexpr static const T   alpha = static_cast<T>(HH<double>*CC<double>/BK<double> * 1.e4/phyc::CM_TO_M<double>); // [K * micron]
+    constexpr static const T   alpha = HH<double>*CC<double>/BK<double> * 1.e4/phyc::CM_TO_M<double>; // [K * micron]
     constexpr static const T     cte = 0.75e-18;
     constexpr static const T C = phyc::CM_TO_M<T>*phyc::CM_TO_M<T>;
     constexpr static const T cc[6] = {152.519,49.534,-118.858,92.536,-34.194,4.982};
@@ -141,7 +141,7 @@ namespace sr{
       T const eps1 = exp(alpha/(Tg*lambda0));
       T const eps2 = exp(-alpha/(Tg*lambda));
       
-      T sigma = (cc[0] + cc[1]*scom + cc[2]*com + cc[3]*com*scom + cc[4]*com2 + cc[5]*com2*scom)*(lambda*lambda*lambda) * com * scom;
+      T const sigma = (cc[0] + cc[1]*scom + cc[2]*com + cc[3]*com*scom + cc[4]*com2 + cc[5]*com2*scom)*(lambda*lambda*lambda) * com * scom;
       res = (eps1 * (1-eps2) * cte * sigma) / (Tg*Tg*sqrt(Tg));
       dres = res * (-2.5f/Tg - alpha/(lambda0*Tg*Tg) - (eps2 * alpha/(Tg*Tg*lambda)) / (1-eps2) );
     }
@@ -155,7 +155,7 @@ namespace sr{
   // ****************************************************************************** //
 
   template<typename T>
-  inline T Thompson(T const &Ne, T &dNe)
+  inline T Thompson(T const Ne, T &dNe)
   {
     //-----------------------------------------------------------------
     // hydrogen atom (cm^-1/m^-1) due to Thomson scattering (scattering with free electrons)
@@ -383,14 +383,54 @@ namespace sr{
   
   // ****************************************************************************** //
 
+  template<typename U>
+  inline U H1min_alternative(U const XH1, U const XHMIN, U const lambda, U const T, U const XNE)
+  {
+    double const HKT = phyc::HH<double> / (T * phyc::BK<double>);
+    double const FREQ = 2.997925E10 / lambda;
+    double const TKEV = 8.6171E-5*T;
+    double const EHVKT=exp(-FREQ*HKT);
+
+    U H=0,HMINBF,HMINFF=0,HMIN=0;
+
+    double const FREQ1=FREQ*1.E-10;
+    U const B=(1.3727E-15+4.3748/FREQ)/FREQ1;
+    U const C=-2.5993E-7/pow(FREQ1,2);
+
+   if(FREQ <= 1.8259E14) HMINBF=0.;
+   else if(FREQ >= 2.111E14) HMINBF=6.801E-10+(5.358E-3+(1.481E3+(-5.519E7+4.808E11/FREQ1)/FREQ1)/FREQ1)/FREQ1;
+   else HMINBF=3.695E-6+(-1.251E-1+1.052E3/FREQ1)/FREQ1;
+
+   HMINFF=(B+C/T)*XH1*XNE*2.E-20;
+
+   
+  /*
+    We use the number density / partition function for H-.
+    The partition function for H- is 1 and not 2 as was mistakenly
+    used before (fixed 2007-12-15, NP)! The EOS calculations are
+    good up to 7730K, we use Kurucz approximation for higher T.
+  */
+   if(T < 7730.) HMIN=XHMIN;
+   else HMIN=exp(0.7552/TKEV)/(2.*2.4148E15*T*sqrt(T))*XH1*XNE;
+   
+   H=HMINBF*(1-EHVKT)*HMIN*1.E-10;
+   return H+HMINFF;
+  }
+  
+  // ****************************************************************************** //
+
+  
   template<typename T>
   inline T continuum_absorption(T const &Tg, T const &Ne, double const lambda, T* const __restrict__ H)
   {
-    T const& nHI     = H[1];
-    T const& nH2     = H[5];
-    
+    T const nHI     = H[1];
+    T const nH2     = H[5];
+    T const nHmin   = H[3];
     T dTg_tmp=0, dNe_tmp=0, dtmp=0;
 
+
+    T const Hmin =  H1min_alternative(nHI / 2.0, nHmin, lambda, Tg, Ne);
+    
     // --- Thompson opacity --- //
     T const thom = Thompson<T>(Ne, dNe_tmp);
 
@@ -402,16 +442,16 @@ namespace sr{
     // --- H2 Raileigh scattering --- //
     T const RayH2 = Rayleigh_H2<T>(nH2, lambda, dtmp);
 
-    
     // --- Hminus BF --- //
-    T const HminBF = Hminus_BF<T>(Tg, Ne, lambda, dTg_tmp, dNe_tmp);
-
-
+    //T const HminBF = Hminus_BF<T>(Tg, Ne, lambda, dTg_tmp, dNe_tmp);
 
     // --- Hminus FF --- //
-    T const HminFF = Hminus_FF<T>(Tg, Ne, lambda, dTg_tmp, dNe_tmp);
+    //T const HminFF = Hminus_FF<T>(Tg, Ne, lambda, dTg_tmp, dNe_tmp);
 
-    return thom + (hydr + HminFF + HminBF)*nHI + RayH2;
+    //return Hmin + nHI*hydr + thom;
+    return thom + (hydr)*nHI + Hmin + RayH2;
+
+    //return thom + (hydr + HminFF + HminBF)*nHI + RayH2;
   }
 
   // ****************************************************************************** //
@@ -421,8 +461,8 @@ namespace sr{
   {
     double const lambda = phyc::CC<double> / nu;
     
-    T const& nHI     = H[1];
-    T const& nH2     = H[5];
+    T const nHI = H[1];
+    T const nH2 = H[5];
     
     T dTg_tmp=0, dNe_tmp=0, dtmp=0;
 
@@ -435,7 +475,7 @@ namespace sr{
 
 
     // --- H2 Raileigh scattering --- //
-    T const RayH2 = Rayleigh_H2<T>(nH2, lambda, dtmp);
+    //T const RayH2 = Rayleigh_H2<T>(nH2, lambda, dtmp);
 
     
     // --- Hminus BF --- //
@@ -447,7 +487,7 @@ namespace sr{
     T const HminFF = Hminus_FF<T>(Tg, Ne, lambda, dTg_tmp, dNe_tmp);
 
     
-    return thom + (hydr + HminFF + HminBF)*nHI + RayH2;
+    return thom + (hydr + HminFF + HminBF)*nHI;// + RayH2;
   }
 }
 
