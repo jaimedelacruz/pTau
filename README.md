@@ -1,8 +1,8 @@
 # pTau
-Computation in parallel of simple H background opacities and an optical depth-scale from temperature, z-scale and [Pgas or rho].
+Computation in parallel of simple H background opacities and an optical depth-scale from temperature, z-scale and [Pgas or rho]. It also allows computing an optimal depth-scale for radiative transfer calculations, taking into account gradients in gas temperature, mass density, optical-depth and line-of-sight velocity.
 
 ## Compilation of the C++ module
-These routines require a C++-14 compiler with support for OpenMP: g++, clan++ or icpc should work
+These routines require a C++-14 compiler with support for OpenMP: g++, clang++ or icpc should work
 
 To compile it simply use:
 ```
