@@ -256,7 +256,7 @@ namespace sr{
     T const dtheta3 = 2*dtheta1;
 
     // Lowest level which can be photoionized
-    int const n0 = 1 + std::floor(sqrt(r*lambda));
+    int const n0 = 1 + floor(sqrt(r*lambda));
     int const n02 = n0*n0;
     
     // Sum over states that can be photoionized
