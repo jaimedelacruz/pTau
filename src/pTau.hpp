@@ -19,7 +19,7 @@ template<typename T> inline
 void checkNaNs(int const n, T* const __restrict__ var)
 {
   for(int ii=0; ii<n; ++ii)
-    var[ii] = (std::isnan(var[ii]) ? 0 : var[ii]);
+    var[ii] = (isnan(var[ii]) ? 0 : var[ii]);
 }
 
 
@@ -68,7 +68,7 @@ void getAlpha_one(T const Tg, T const Ne, int const nLambda,
   
   for(int ww=0; ww<nLambda; ++ww){
     T const tmp =  sr::continuum_absorption<T>(Tg, Ne, lambda[ww], Hpop);
-    alpha[ww] = std::max(((std::isnan(tmp)) ? T(1.e-31) : tmp), T(1.e-31));
+    alpha[ww] = std::max(((isnan(tmp)) ? T(1.e-31) : tmp), T(1.e-31));
   }
 }
 
@@ -160,7 +160,7 @@ void getAlpha_T_Pg(long const ntot, const T* const __restrict__ Tg, const T* con
       
       Ne = sr::Pe_from_Pg<double>(tg, pg, abund, Hpop) / (tg*phyc::BK<double>);
       
-      if(std::isnan(Ne))
+      if(isnan(Ne))
 	Ne = sr::init_Pe_from_Pg<double>(tg, pg, 0.913)/ (tg*phyc::BK<double>);
       
       
