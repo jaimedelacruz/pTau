@@ -9,7 +9,7 @@ Coded by J. de la Cruz Rodriguez (ISP-SU, 2021)
 
 # *******************************************************************************
 
-def getContinuumOpacity(Tg, Pg = None, rho = None, nthreads=4, wav=[5000.0]):
+def getContinuumOpacity(Tg, Pg = None, rho = None, nthreads=4, wav=np.float64([5000.0])):
     """
     getContinuumOpacity computes the background opacity due to H (H, H-, etc.. and Thompson)
     Input: 
@@ -151,7 +151,7 @@ def _checkDims(arr1, arr2, Name = ""):
 
 # *******************************************************************************
 
-def getOptimizedScale(temp, rho, vlos, ltau, nDep2 = None, nthreads = 4, Tcut = 50000.0, ltau_cut = 2.0, smooth_window = 1, dtype = None, vel_scal = 2.0):
+def getOptimizedScale(temp, rho, vlos, ltau, nDep2 = None, nthreads = 4, Tcut = 50000.0, ltau_cut = 2.0, smooth_window = 1, dtype = None, vel_scal = 2.0, ltau_top=-15):
     """
     getOptimizedScale computes an optimal depth-scale for radiative transfer calculations attending
     to gradients in temperature, mass density, line-of-sight velocity and optical depth-scale.
@@ -201,9 +201,9 @@ def getOptimizedScale(temp, rho, vlos, ltau, nDep2 = None, nthreads = 4, Tcut = 
     
     # Call C++ wrapper based on the type
     if(dtype == 'float64'):
-        return pTau.OptimizeGradients_double(temp1, rho1, vlos1, ltau1, nthreads = int(nthreads), nDep2 = nDep2, Tcut = Tcut, ltau_cut = ltau_cut, smooth_window = int(smooth_window), vel_scal = vel_scal)
+        return pTau.OptimizeGradients_double(temp1, rho1, vlos1, ltau1, nthreads = int(nthreads), nDep2 = nDep2, Tcut = Tcut, ltau_cut = ltau_cut, smooth_window = int(smooth_window), vel_scal = vel_scal, ltau_top = ltau_top)
     else:
-        return pTau.OptimizeGradients_float(temp1, rho1, vlos1, ltau1, nthreads = int(nthreads), nDep2 = nDep2, Tcut = Tcut, ltau_cut = ltau_cut, smooth_window = int(smooth_window), vel_scal = vel_scal)
+        return pTau.OptimizeGradients_float(temp1, rho1, vlos1, ltau1, nthreads = int(nthreads), nDep2 = nDep2, Tcut = Tcut, ltau_cut = ltau_cut, smooth_window = int(smooth_window), vel_scal = vel_scal, ltau_top = ltau_top)
 
     
 # *******************************************************************************
@@ -223,7 +223,10 @@ def OptimizeVariable(index, var, nthreads = 4, log = False):
     dtype = var.dtype
     if((dtype != 'float32') and (dtype != 'float64')):
         dtype = 'float64'
-
+        
+    if(log is not False):
+        dtype='float64'
+        
     #
     # Check that arrays are contiguous in memory and
     # all have the same dtype
@@ -296,3 +299,28 @@ def getNe(temp, Rho = None, Pg = None, nthreads=8, dtype=None):
             return pTau.getNeRho_float(temp1, Rho1, nthreads=int(nthreads))
 
 # *******************************************************************************
+
+#def getHpops_float(ar[float,ndim=3] Tg, ar[float,ndim=3] Pg, ar[float,ndim=3] Ne, int nH = 6, int nthreads = 8):
+
+def getHpops(Tg, Pg, Ne, nH = 6, nthreads=8, dtype=None):
+
+    
+
+    if(dtype is None):
+        dtype = Tg.dtype
+        if((dtype != 'float32') and (dtype != 'float64')):
+            dtype = 'float64'
+
+
+            
+    temp1  = _checkArray(Tg, dtype=dtype)
+    pg1  = _checkArray(Pg, dtype=dtype)
+    ne1  = _checkArray(Ne, dtype=dtype)
+
+    
+    if(dtype == 'float64'):
+        return pTau.getHpops_double(temp1, pg1, ne1, nH = int(nH), nthreads = int(nthreads))
+    else:
+        return pTau.getHpops_float(temp1, pg1, ne1, nH = int(nH), nthreads = int(nthreads))
+
+        
