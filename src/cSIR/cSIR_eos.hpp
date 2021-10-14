@@ -296,7 +296,7 @@ namespace sr{
   inline T compute_Pe(T const Tg, T const Pg, T Pe,  std::vector<T> const& abund, T* __restrict__ H)
   {
     // --- Taken from SIR/Wittmann --- //
-    T const theta = static_cast<T>(5040)/Tg;
+    T const theta = 5040/Tg;
 
     
     // --- Disoc. Constants --- //
@@ -341,34 +341,34 @@ namespace sr{
       a = sr::Saha<T>(Tg, Pe, Eion1, u1, u2);
       b = sr::Saha<T>(Tg, Pe, Eion2, u2, u3);
 
-      c = 1.0f + a * (1.0f + b);
+      c = 1 + a * (1 + b);
       alfai=abund[ii]/abund[0];
       ab_others += alfai;
-      g1 += (alfai / c)*a*(1.0f+2*b);
+      g1 += (alfai / c)*a*(1+2*b);
     }
 
     // --- Now compute terms, it gets messy --- //
 
-    a = 1.0f + g2 + g3;
+    a = 1 + g2 + g3;
     e = (g2/g5)*g4;
     b = 2*(1+e);
     c = g5;
     d = g2-g3;
 
-    a = std::min<T>(std::max<T>(a, 1.e-15f), 1.e+15f);
-    d = std::min<T>(std::max<T>(d, 1.e-15f), 1.e+15f);
+    a = std::min<T>(std::max<T>(a, 1.e-15), 1.e+15);
+    d = std::min<T>(std::max<T>(d, 1.e-15), 1.e+15);
 
     c1=c*b*b+a*d*b-e*a*a;
     c2=2.*a*e-d*b+a*b*g1;                                                         
     c3=-(e+b*g1) ;                                                        
-    f1=0.5f*c2/c1 ;            
+    f1=0.5*c2/c1 ;            
     f1=-f1+sign<T>(1.0f,c1)*sqrt(f1*f1-c3/c1) ;
-    f5=(1.f-a*f1)/b ;
+    f5=(1-a*f1)/b ;
     f4=e*f5 ;
     f3=g3*f1 ;
     f2=g2*f1 ;
     fe=f2-f3+f4+g1 ;
-    fe = std::min<T>(std::max<T>(fe, 1.e-30f), 1.e+30f);
+    fe = std::min<T>(std::max<T>(fe, 1.e-30), 1.e+30);
     T phtot=Pe/fe;
 
     // --- Supposedly if f5 is small it can lead to unstable results --- //
@@ -386,7 +386,7 @@ namespace sr{
 
     // --- Re-evaluate Pe --- //
     
-    Pe = std::max<T>(Pg /(1.0f+(f1+f2+f3+f4+f5+ab_others)/fe), 1.e-15f);
+    Pe = std::max<T>(Pg /(1.0f+(f1+f2+f3+f4+f5+ab_others)/fe), 1.e-30);
 
     
     // --- copy H populations --- //
@@ -408,24 +408,31 @@ namespace sr{
   template<typename T>
   inline T Pe_from_Pg(T const& Tg, T const& Pg, std::vector<T> const &abund, T* __restrict__ H)
   {
+    constexpr static const int MAX_ITER = 500; 
     
     // --- Init Pe taking into account only the contribution from H --- //
-    T Pe = init_Pe_from_Pg<T>(Tg, Pg, 0.91);
+    T Pe = init_Pe_from_Pg<T>(Tg, Pg, 0.91)*1.02;
     
     // --- We could iterate with a Newton-Raphson, but it will probably be slower
     // --- than simply iterating like a lambda iteration
-    T diff  = 1.0;
+    double diff  = 1.0;
     int iter = 0;
     do{
       // --- Solve partial pressures and recount electrons --- //
       T iPe = compute_Pe<T>(Tg, Pg, Pe, abund, H);
       
       // --- Damp correction by taking the average of the new and the old --- //
-      iPe = iPe*0.6f + Pe*0.4f;
+      
+      iPe = iPe*0.95 + Pe*0.05;
       diff = std::abs((iPe-Pe)/Pe);
 
       Pe = iPe;
-    }while(diff > 1.e-5 && (iter++ < 40));
+    }while(diff > 1.e-5 && (iter++ < MAX_ITER));
+
+    if(iter > MAX_ITER){
+      fprintf(stderr,"sr::Pe_from_Pg: Warning, max iter reached: diff=%le\n", diff);
+    }
+    
     return Pe;
   }
 
