@@ -67,11 +67,27 @@ void getAlpha_one(T const Tg, T const Ne, int const nLambda,
   //sr::compute_Ntot(Tg, Ne, abund, Hpop); // Solve EOS to get H partial densities
   
   for(int ww=0; ww<nLambda; ++ww){
-    T const tmp =  sr::continuum_absorption<T>(Tg, Ne, lambda[ww], Hpop);
+    T const tmp =  sr::continuum_absorption<double>(double(Tg), double(Ne), lambda[ww], Hpop);
     alpha[ww] = std::max(((isnan(tmp)) ? T(1.e-31) : tmp), T(1.e-31));
   }
 }
+// ********************************************************* //
 
+template<typename T> inline
+void getAlpha_one_bif(T const Tg, T const Ne, int const nLambda,
+		  const double* const __restrict__ lambda, T* const __restrict__ alpha,
+		   T* const __restrict__ Hpop)
+{
+  // alpha has dimensions (nLambda) //
+  
+  //T Hpop[sr::nHv] = {}; // H populations
+  //sr::compute_Ntot(Tg, Ne, abund, Hpop); // Solve EOS to get H partial densities
+  
+  for(int ww=0; ww<nLambda; ++ww){
+    T const tmp =  sr::continuum_absorption_bif<double>(double(Tg), double(Ne), lambda[ww], Hpop);
+    alpha[ww] = std::max(((isnan(tmp)) ? T(1.e-31) : tmp), T(1.e-31));
+  }
+}
 // ********************************************************* //
 
 template<typename T> inline
@@ -180,7 +196,96 @@ void getAlpha_T_Pg(long const ntot, const T* const __restrict__ Tg, const T* con
 
   delete [] Hpop_all;
 }
+  // ********************************************************* //
+
+template<typename T> inline
+void getAlpha_T_Ne(long const ntot, const T* const __restrict__ Tg, const T* const __restrict__ Ne_in, const T* const __restrict__ nHin,
+		    int const nLambda, const double* const __restrict__ lambda, double* const __restrict__ alpha,
+		    int const nthreads)
+{
   
+  static std::vector<double> const abund =
+    {9.13226338e-01, 8.53214895e-02, 1.12475628e-11, 1.29139300e-11,
+     3.63963999e-10, 3.31939113e-04, 1.02578992e-04, 7.78141233e-04,
+     3.31939113e-08, 1.12475628e-04, 1.95460240e-06, 3.47582921e-05,
+     2.69810240e-06, 3.24383256e-05, 2.57666779e-07, 1.48271755e-05,
+     2.89106881e-07, 3.31939113e-06, 1.51725448e-07, 2.09439421e-06,
+     1.15095522e-09, 8.93425674e-08, 9.14236232e-09, 4.27620413e-07,
+     2.24418383e-07, 3.16999391e-05, 7.60428576e-08, 1.62576747e-06,
+     1.48271755e-08, 3.63963999e-08, 6.93519103e-10, 2.34994895e-09,
+     2.14317892e-10, 2.04671998e-09, 3.89994452e-10, 1.55259588e-09,
+     3.63963999e-10, 7.26203652e-10, 1.58876048e-10, 2.89106881e-10,
+     2.40468630e-11, 7.60428576e-11, 1.00244009e-20, 6.32496940e-11,
+     1.20519807e-11, 4.47773542e-11, 7.96266470e-12, 6.62305602e-11,
+     2.63668609e-11, 9.14236232e-11, 9.14236232e-12, 1.58876048e-10,
+     2.95841045e-11, 1.55259588e-10, 1.20519807e-11, 1.23327074e-10,
+     1.51725448e-11, 3.24383256e-11, 4.68876459e-12, 2.89106881e-11,
+     1.00244009e-20, 9.14236232e-12, 2.95841045e-12, 1.20519807e-11,
+     1.15095522e-12, 1.15095522e-11, 1.66363646e-12, 7.78141233e-12,
+     9.14236232e-13, 1.09915371e-11, 5.26088040e-12, 6.93519103e-12,
+     1.23327074e-12, 1.17776442e-11, 1.70238753e-12, 2.57666779e-11,
+     2.04671998e-11, 5.76844065e-11, 9.35531529e-12, 1.12475628e-11,
+     7.26203652e-12, 6.47229686e-11, 4.68876459e-12, 1.00244009e-20,
+     1.00244009e-20, 1.00244009e-20, 1.00244009e-20, 1.00244009e-20,
+     1.00244009e-20, 1.20519807e-12, 1.00244009e-20, 3.09783604e-13,
+     1.00244009e-20, 1.00244009e-20, 1.00244009e-20, 1.00244009e-20,
+     1.00244009e-20, 1.00244009e-20, 1.00244009e-20};
+
+
+  
+  // --- get Mu and avweight--- //
+
+  static double const mu       = getMu(      int(abund.size()), &abund[0]);
+  static double const avweight = getAvweight(int(abund.size()), &abund[0]);
+
+  
+  // --- prepare parallel loop and get alpha --- //
+
+  long ii = 0; 
+  int k = 0;
+  
+  int tid = 0, per=0, oper=-1;
+  float pscl = 100.0 / (ntot-1.0);
+  double Ne = 0, tg=0, r = 0;
+
+  double* const __restrict__ Hpop_all = new double [sr::nHv*nthreads];
+  double* __restrict__ Hpop = NULL;
+  
+  
+#pragma omp parallel default(shared) firstprivate(ii, Ne, tid, Hpop, tg, r, k) num_threads(nthreads)
+  {
+
+    tid = omp_get_thread_num();
+    Hpop = &Hpop_all[tid*sr::nHv];
+    
+#pragma omp for schedule(dynamic,8)
+    for(ii=0; ii<ntot; ++ii){
+      tg = Tg[ii];//, r = rho[ii];
+      Ne = Ne_in[ii];
+      
+      Hpop[0] = nHin[ii];
+      
+      for(k=1; k<(sr::nHv-1); ++k){
+	Hpop[0] += nHin[k*ntot + ii];
+      }
+      Hpop[1] = nHin[5*ntot + ii];
+      
+      getAlpha_one_bif(tg, Ne, nLambda, lambda, &alpha[ii*nLambda], Hpop);
+
+      if(tid == 0){
+	per = int(ii*pscl+0.5);
+	if(per != oper){
+	  oper = per;
+	  fprintf(stderr,"\rprocessing -> %4d%s", per,"%");
+	}
+      }
+    } // ii
+  } // parallel
+
+  fprintf(stderr,"\rprocessing -> %4d%s\n", int(100), "%");
+
+  delete [] Hpop_all;
+}
 // ********************************************************* //
 
 template<typename T> inline
@@ -289,10 +394,10 @@ void integrate_one(int const nDep, const T* const __restrict__ z,
 // ********************************************************* //
 
 template<typename T> inline
-void integrate_alpha(int const nPix, int const nDep, const T* const __restrict__ z,
+void integrate_alpha(long const nPix, long const nDep, const T* const __restrict__ z,
 		     const double* const __restrict__ alpha, T* const __restrict__ ltau, int const nthreads)
 {
-  int ii = 0;
+  long ii = 0;
   
 #pragma omp parallel default(shared) firstprivate(ii) num_threads(nthreads)
   {
@@ -448,7 +553,6 @@ static void _fill_nH_LTE_6(long const nLev, U const& temp,  U const& Pg,
   // --- Energy [ergs]: {0.000, 82258.211, 97491.219, 102822.766, 105290.508, 109677.617} * H * C
   constexpr static const U ELEV[6] = {0.0, 1.63401468e-11, 1.93661011e-11, 2.04251840e-11,
 				      2.09153875e-11, 2.17868629e-11};
-  
   constexpr static const U G[6]    = {2,8,18,32,50,1};
   
   double const BKT = phyc::BK<double> * temp;

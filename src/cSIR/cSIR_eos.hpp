@@ -19,7 +19,7 @@
 
 namespace sr{
 
-  constexpr static const int nHv = 7;
+  inline constexpr static const long nHv = 6;
   
   // ****************************************************************************** //
 

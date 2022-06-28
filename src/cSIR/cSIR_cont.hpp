@@ -419,7 +419,45 @@ namespace sr{
   
   // ****************************************************************************** //
 
+  template<typename T>
+  inline T getHminus(T const &Tg, T const &Ne, T const &nH1)
+  {
+    constexpr static const double CSAHA = (phyc::HH<double> / (2.0 * phyc::PI<double> * phyc::ME<double>)) *
+      (phyc::HH<double> / phyc::BK<double>);
+    constexpr static const double EION_HMIN_BK = 0.754 * phyc::EV<double>/phyc::BK<double>;
+    
+    double const dum = CSAHA / Tg;
+    double const PhiHmin = 0.25 * dum*sqrt(dum)*exp(EION_HMIN_BK / Tg);
+
+    return PhiHmin * double(Ne) * double(nH1);
+  }
   
+  // ****************************************************************************** //
+
+  template<typename T>
+  inline T continuum_absorption_bif(T const &Tg, T const &Ne, double const lambda, T* const __restrict__ H)
+  {
+    T const nHI     = H[0];
+    T const nH2     = H[1];    
+    T const nHmin   = getHminus(Tg, Ne, nHI);
+
+    T dNe_tmp=0, dTg_tmp=0;
+    
+    T const Hmin =  H1min_alternative(nHI / 2.0, nHmin, lambda, Tg, Ne);
+    
+    // --- Thompson opacity --- //
+    T const thom = Thompson<T>(Ne, dNe_tmp);
+
+    
+    // --- Hydrogen BB and BF ---//
+    T const hydr = hydrogen<T>(Tg, lambda, dTg_tmp); 
+
+    return thom + (hydr)*nHI + Hmin;
+  }
+
+  
+  // ****************************************************************************** //
+
   template<typename T>
   inline T continuum_absorption(T const &Tg, T const &Ne, double const lambda, T* const __restrict__ H)
   {

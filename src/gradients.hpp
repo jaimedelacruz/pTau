@@ -257,7 +257,7 @@ namespace gr{
 
     // --- scaling rules --- //
 
-    static const T log11 = 1 / log10(1.1);
+    const T log11 = 1 / log10(1.1);
     const T vscal = 1.0e-5 / vel_scal;
 
 
@@ -334,14 +334,14 @@ namespace gr{
   // ************************************************************************************************************** //
 
   template<typename T> inline
-  void optimizeGradients(int const nPix, int const nDep, const T* const __restrict__ temp, const T* const __restrict__ ltau,
+  void optimizeGradients(long const nPix, long const nDep, const T* const __restrict__ temp, const T* const __restrict__ ltau,
 			 const T* const __restrict__ rho, const T* const __restrict__ vlos, int const smooth_window,
-			 T const Tcut, T const tau_cut, int const nthreads, int const nDep2, T* const __restrict__ res, T const vel_scal,
+			 T const Tcut, T const tau_cut, int const nthreads, long const nDep2, T* const __restrict__ res, T const vel_scal,
 			 T const ltau_top)
     
   {
     
-    int ipix = 0;
+    long ipix = 0;
     fprintf(stderr,"optimizeGradients: vel_scal = %lf\n", double(vel_scal));
 #pragma omp parallel default(shared) firstprivate(ipix) num_threads(nthreads)
     {
@@ -369,11 +369,11 @@ namespace gr{
   // ************************************************************************************************************** //
 
   template<typename T> inline
-  void interpolateGradient(int const nPix, int const nDep, const T* const __restrict__ var, int const nDep2, const T* const __restrict__ index,
+  void interpolateGradient(long const nPix, long const nDep, const T* const __restrict__ var, long const nDep2, const T* const __restrict__ index,
 			   const T* const __restrict__ index_new, T* const __restrict__ res, int const nthreads)
   {
 
-    int ipix = 0;
+    long ipix = 0;
     
 #pragma omp parallel default(shared) firstprivate(ipix) num_threads(nthreads)
     {
